@@ -1,6 +1,7 @@
 # Custom
-Dataset/
+Dataset_v1/
 yolov8n.pt
+runs/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
