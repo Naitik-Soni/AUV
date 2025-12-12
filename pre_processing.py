@@ -27,14 +27,10 @@ def getContouredImage(frame):
         area = cv2.contourArea(cnt)
 
         if sides == 4 and area >= (h_i*w_i)*0.05:
-            print("Area", area, "Rect area", h_i*w_i*0.3)
-            print(cnt)
-            print(h, w)
-            print()
-            shape = "Rectangle"
+            shape = "Gate"
             cv2.rectangle(image, (x, y), (x+w, y+h), (0, 255, 0), 2)
             cv2.putText(image, shape, (x, y - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
     return image
 
