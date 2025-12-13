@@ -1,0 +1,42 @@
+import cv2
+from pipeline import gate_detection_pipeline
+
+def read_video(video_path):
+    cap = cv2.VideoCapture(video_path)
+    return cap
+
+def resize_frame(frame, rf = 0.5):
+    return cv2.resize(frame, None, None, fx=rf, fy=rf, interpolation=cv2.INTER_AREA)
+
+def clahe_on_lab(bgr):
+    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)
+    l, a, b = cv2.split(lab)
+    clahe_local = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+    l2 = clahe_local.apply(l)
+    lab2 = cv2.merge((l2, a, b))
+    bgr2 = cv2.cvtColor(lab2, cv2.COLOR_LAB2BGR)
+    return bgr2
+
+# cap = read_video(r"Input/vid_1.mp4")
+cap = read_video(r"Input/vid_2.mp4")
+# cap = read_video(r"Input/vid_3.mp4")
+# cap = read_video(r"Input/vid_4.mp4")
+# cap = read_video(r"Input/vid_5.mp4")
+# cap = read_video(r"Input/vid_6.mp4")
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    frame = resize_frame(frame)
+    frame = clahe_on_lab(frame)
+    result, detected = gate_detection_pipeline(frame)
+
+    cv2.imshow("Gate Detection", result)
+
+    if cv2.waitKey(60) & 0xFF == ord('q'):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
