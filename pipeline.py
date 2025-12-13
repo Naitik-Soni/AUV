@@ -1,30 +1,48 @@
 import cv2
-from green_channel_masking import *
-from hough_lines import *
-from intersection import *
-from noise_removal import *
-from rectangle_detection import *
-from draw_lines import *
+import numpy as np
+
+from green_channel_masking import green_channel_threshold
+from noise_removal import clean_mask
+from rectangle_detection import detect_rectangle_contours
+from hough_lines import detect_hough_lines
+from intersection import gate_decision
+from draw_lines import draw_hough_lines
+
+CONF_NONE   = 0
+CONF_LOW    = 1
+CONF_MEDIUM = 2
+CONF_HIGH   = 3
+
 
 def gate_detection_pipeline(frame):
+    """
+    Pipeline function:
+    - takes a single frame
+    - runs all CV stages
+    - draws intermediate results
+    - returns output frame + confidence
+    """
+
     output = frame.copy()
 
-    # Threshold
+    # --------------------------------------------------
+    # 1. Green channel thresholding
+    # --------------------------------------------------
     mask = green_channel_threshold(frame)
 
-    # Clean
+    # --------------------------------------------------
+    # 2. Noise removal
+    # --------------------------------------------------
     mask = clean_mask(mask)
 
-    # Contours
+    # --------------------------------------------------
+    # 3. Rectangle detection (contours)
+    # --------------------------------------------------
     contours, rectangles = detect_rectangle_contours(
-        mask, frame.shape[0], frame.shape[1]
+        mask,
+        frame.shape[0],
+        frame.shape[1]
     )
-
-    # Hough Lines
-    lines = detect_hough_lines(mask)
-
-    # Decision (keep as-is for now)
-    gate_detected = gate_decision(rectangles, lines)
 
     # Draw rectangles (GREEN)
     for (x, y, w, h) in rectangles:
@@ -36,21 +54,54 @@ def gate_detection_pipeline(frame):
             3
         )
 
+    # --------------------------------------------------
+    # 4. Hough line detection
+    # --------------------------------------------------
+    lines = detect_hough_lines(mask)
+
     # Draw Hough lines (RED)
     if lines is not None:
-        flat_lines = [l[0] if isinstance(l[0], (list, tuple, np.ndarray)) else l for l in lines]
-        draw_hough_lines(output, flat_lines)
+        # normalize line format: [(rho, theta), ...]
+        flat_lines = []
+        for l in lines:
+            if isinstance(l[0], (list, tuple, np.ndarray)):
+                flat_lines.append(tuple(l[0]))
+            else:
+                flat_lines.append(tuple(l))
 
-    # Gate label
-    if gate_detected:
-        cv2.putText(
-            output,
-            "GATE DETECTED",
-            (50, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            1,
-            (0, 0, 255),
-            2
-        )
+        # draw_hough_lines(output, flat_lines)
+    else:
+        flat_lines = []
 
-    return output, gate_detected
+    # --------------------------------------------------
+    # 5. Gate decision (SINGLE CALL)
+    # --------------------------------------------------
+    confidence = gate_decision(rectangles, flat_lines)
+
+    # --------------------------------------------------
+    # 6. Visualization label
+    # --------------------------------------------------
+    if confidence == CONF_HIGH:
+        text = "GATE DETECTED"
+        color = (0, 0, 255)
+    elif confidence == CONF_MEDIUM:
+        text = "GATE DETECTED"
+        color = (0, 165, 255)
+    elif confidence == CONF_LOW:
+        text = "POSSIBLE GATE"
+        color = (0, 255, 255)
+    else:
+        text = "NO GATE"
+        color = (255, 255, 255)
+
+    cv2.putText(
+        output,
+        text,
+        (40, 40),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        color,
+        2
+    )
+
+    return output, confidence

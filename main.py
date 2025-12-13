@@ -1,11 +1,12 @@
 import cv2
 from pipeline import gate_detection_pipeline
+from video_writer import VideoWriter
 
 def read_video(video_path):
     cap = cv2.VideoCapture(video_path)
     return cap
 
-def resize_frame(frame, rf = 0.5):
+def resize_frame(frame, rf = 0.5*2):
     return cv2.resize(frame, None, None, fx=rf, fy=rf, interpolation=cv2.INTER_AREA)
 
 def clahe_on_lab(bgr):
@@ -18,11 +19,23 @@ def clahe_on_lab(bgr):
     return bgr2
 
 # cap = read_video(r"Input/vid_1.mp4")
-cap = read_video(r"Input/vid_2.mp4")
-# cap = read_video(r"Input/vid_3.mp4")
+# cap = read_video(r"Input/vid_2.mp4")
+cap = read_video(r"Input/vid_3.mp4")
 # cap = read_video(r"Input/vid_4.mp4")
 # cap = read_video(r"Input/vid_5.mp4")
 # cap = read_video(r"Input/vid_6.mp4")
+ret, frame = cap.read()
+
+if not ret:
+    raise FileNotFoundError("Video at destination not founc")
+
+frame = resize_frame(frame)
+
+writer = VideoWriter(
+    output_path="output_gate_detection.mp4",
+    fps=25,
+    frame_size=(frame.shape[1], frame.shape[0])
+)
 
 while True:
     ret, frame = cap.read()
@@ -33,10 +46,15 @@ while True:
     frame = clahe_on_lab(frame)
     result, detected = gate_detection_pipeline(frame)
 
-    cv2.imshow("Gate Detection", result)
+    if result is None:
+        continue
 
-    if cv2.waitKey(60) & 0xFF == ord('q'):
+    cv2.imshow("Gate Detection", result)
+    writer.write(result)
+
+    if cv2.waitKey(25) & 0xFF == ord('q'):
         break
 
+# writer.release()
 cap.release()
 cv2.destroyAllWindows()

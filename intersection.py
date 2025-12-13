@@ -1,71 +1,86 @@
 import numpy as np
 
-def classify_hough_lines(lines):
-    vertical = []
-    horizontal = []
+CONF_NONE   = 0
+CONF_LOW    = 1
+CONF_MEDIUM = 2
+CONF_HIGH   = 3
+
+
+def gate_decision(rectangles, lines, px_thresh=5):
+    """
+    Logic:
+    - Rectangle only                        -> LOW
+    - Rectangle + 2 vertical lines near it  -> MEDIUM
+    - Rectangle + 2 vertical + 1 horizontal -> HIGH
+    - Otherwise                             -> NONE
+    """
+
+    # --------------------------------------------------
+    # 0. Basic validation
+    # --------------------------------------------------
+    if rectangles is None or len(rectangles) == 0:
+        return CONF_NONE
+
+    if lines is None:
+        lines = []
+
+    # --------------------------------------------------
+    # 1. Pick the most likely gate rectangle
+    #    (tallest one)
+    # --------------------------------------------------
+    x, y, w, h = max(rectangles, key=lambda r: r[3])
+
+    left_x  = x
+    right_x = x + w
+    top_y   = y
+
+    # --------------------------------------------------
+    # 2. Classify lines
+    # --------------------------------------------------
+    vertical_lines = []
+    horizontal_lines = []
 
     for rho, theta in lines:
         angle = theta * 180 / np.pi
 
         if angle < 5 or angle > 175:
-            vertical.append((rho, theta))
+            vertical_lines.append((rho, theta))
         elif 75 < angle < 105:
-            horizontal.append((rho, theta))
+            horizontal_lines.append((rho, theta))
 
-    return vertical, horizontal
+    # --------------------------------------------------
+    # 3. Rectangle exists → LOW confidence
+    # --------------------------------------------------
+    confidence = CONF_LOW
 
-def find_vertical_gate_posts(rectangles, min_height_ratio=0.6):
-    if len(rectangles) < 2:
-        return None
+    # --------------------------------------------------
+    # 4. Check vertical line proximity
+    # --------------------------------------------------
+    vertical_hits = 0
 
-    rectangles = sorted(rectangles, key=lambda r: r[0])  # sort by x
+    for rho, theta in vertical_lines:
+        # distance from rectangle vertical sides
+        if abs(left_x * np.cos(theta) - rho) < px_thresh:
+            vertical_hits += 1
+        elif abs(right_x * np.cos(theta) - rho) < px_thresh:
+            vertical_hits += 1
 
-    for i in range(len(rectangles)):
-        for j in range(i + 1, len(rectangles)):
-            x1, y1, w1, h1 = rectangles[i]
-            x2, y2, w2, h2 = rectangles[j]
+    # --------------------------------------------------
+    # 5. Rectangle + 2 vertical lines → MEDIUM
+    # --------------------------------------------------
+    if vertical_hits < 2:
+        return confidence
 
-            height_ratio = min(h1, h2) / max(h1, h2)
-            x_gap = abs(x2 - x1)
+    confidence = CONF_MEDIUM
 
-            if height_ratio > min_height_ratio and x_gap > w1:
-                return rectangles[i], rectangles[j]
-
-    return None
-
-def horizontal_line_between_posts(horizontal_lines, left_rect, right_rect):
-    lx, ly, lw, lh = left_rect
-    rx, ry, rw, rh = right_rect
-
-    x_left = lx + lw
-    x_right = rx
-
+    # --------------------------------------------------
+    # 6. Check horizontal line near top edge
+    # --------------------------------------------------
     for rho, theta in horizontal_lines:
-        # y = rho / sin(theta)
-        y = int(rho / np.sin(theta))
+        if abs(top_y * np.sin(theta) - rho) < px_thresh:
+            return CONF_HIGH
 
-        if ly < y < ly + lh:
-            return True
-
-    return False
-
-def gate_decision(rectangles, lines):
-    if len(rectangles) < 2 or len(lines) < 2:
-        return 0
-
-    vertical_lines, horizontal_lines = classify_hough_lines(lines)
-
-    if len(horizontal_lines) == 0:
-        return 0
-
-    posts = find_vertical_gate_posts(rectangles)
-
-    if posts is None:
-        return 0
-
-    left_post, right_post = posts
-
-    if not horizontal_line_between_posts(horizontal_lines, left_post, right_post):
-        return 0
-    return 1
-
+    # --------------------------------------------------
+    # 7. No horizontal → MEDIUM
+    # --------------------------------------------------
+    return confidence
