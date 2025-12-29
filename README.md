@@ -2,5 +2,4 @@
 Autonomous Underwater Vehicle (AUV)
 
 ### Libs:
- - opencv-pyhton
- - ultralytics
+ - opencv-python
