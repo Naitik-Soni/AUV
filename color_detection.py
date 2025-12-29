@@ -76,7 +76,7 @@ def detect_blue_color(image):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-img = cv2.imread(r"P:\Computer vision Experiments\30-Days challenge\CV-30-day-challenge\Images\balcony garden.jpg")
+img = cv2.imread(r"balcony garden.jpg")
 f = 0.5
 img = cv2.resize(img, None, None, fx=f,fy=f)
 cv2.imshow("OG", img)
