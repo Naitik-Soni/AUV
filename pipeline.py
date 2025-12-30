@@ -7,6 +7,7 @@ from rectangle_detection import detect_rectangle_contours
 from hough_lines import detect_hough_lines
 from intersection import gate_decision
 from draw_lines import draw_hough_lines
+from position_calculator import get_position_list
 
 CONF_NONE   = 0
 CONF_LOW    = 1
@@ -24,6 +25,8 @@ def gate_detection_pipeline(frame):
     """
 
     output = frame.copy()
+
+    h_i, w_i = frame.shape[0], frame.shape[1]
 
     # --------------------------------------------------
     # 1. Green channel thresholding
@@ -104,4 +107,10 @@ def gate_detection_pipeline(frame):
         2
     )
 
-    return output, confidence
+    position_list = [1, 0, 0, 0]
+
+    if rectangles:
+        x, y, w, h = max(rectangles, key=lambda r: r[3])
+        position_list = get_position_list((x, y, w, h), h_i, w_i)
+
+    return output, confidence, position_list

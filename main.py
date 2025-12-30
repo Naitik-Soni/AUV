@@ -1,9 +1,10 @@
 import cv2
 from pipeline import gate_detection_pipeline
 from video_writer import VideoWriter
+from color_detection import color_detection_pipeline
 
-def read_video(video_path):
-    cap = cv2.VideoCapture(video_path)
+def read_video(video_path, extras = None):
+    cap = cv2.VideoCapture(video_path, extras) if extras is not None else cv2.VideoCapture(video_path)
     return cap
 
 def resize_frame(frame, rf = 0.5*2):
@@ -20,10 +21,13 @@ def clahe_on_lab(bgr):
 
 # cap = read_video(r"Input/vid_1.mp4")
 # cap = read_video(r"Input/vid_2.mp4")
-cap = read_video(r"Input/vid_3.mp4")
+# cap = read_video(r"Input/vid_3.mp4")
 # cap = read_video(r"Input/vid_4.mp4")
 # cap = read_video(r"Input/vid_5.mp4")
 # cap = read_video(r"Input/vid_6.mp4")
+
+cap = read_video(0, cv2.CAP_V4L2)
+
 ret, frame = cap.read()
 
 if not ret:
@@ -31,11 +35,11 @@ if not ret:
 
 frame = resize_frame(frame)
 
-writer = VideoWriter(
-    output_path="output_gate_detection.mp4",
-    fps=25,
-    frame_size=(frame.shape[1], frame.shape[0])
-)
+# writer = VideoWriter(
+#     output_path="output_gate_detection.mp4",
+#     fps=25,
+#     frame_size=(frame.shape[1], frame.shape[0])
+# )
 
 while True:
     ret, frame = cap.read()
@@ -44,13 +48,16 @@ while True:
 
     frame = resize_frame(frame)
     frame = clahe_on_lab(frame)
-    result, detected = gate_detection_pipeline(frame)
+    result, detection, position = gate_detection_pipeline(frame)
+    color_detected = color_detection_pipeline(frame)
+
+    print("Gate Detection Confidence:", detection, "Position:", position, "Color Detection:", color_detected)
 
     if result is None:
         continue
 
     cv2.imshow("Gate Detection", result)
-    writer.write(result)
+    # writer.write(result)
 
     if cv2.waitKey(25) & 0xFF == ord('q'):
         break

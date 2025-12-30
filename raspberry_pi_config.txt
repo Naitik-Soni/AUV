@@ -1,0 +1,40 @@
+
+# 1
+ - sudo apt update
+ - sudo apt install python3-opencv python3-pip libatlas-base-dev
+ - pip3 install numpy
+
+# 2
+ - sudo apt install libcamera-tools
+
+# 3
+ - Get code from chagpt (sample code given below)
+    ```python
+        import RPi.GPIO as GPIO
+
+        GPIO.setmode(GPIO.BCM)
+        GO_PIN = 18
+        STOP_PIN = 23
+        GPIO.setup(GO_PIN, GPIO.OUT)
+        GPIO.setup(STOP_PIN, GPIO.OUT)
+
+        # inside while loop
+        if detection > 0.7 and color_detected == 1:
+            GPIO.output(GO_PIN, GPIO.HIGH)
+        else:
+            GPIO.output(GO_PIN, GPIO.LOW)
+
+    ```
+
+# 4
+ - In main.py there will be 2 variables
+   (1) position: Array for determining the movement of robot
+        [1, 0, 0, 0] = Move forward
+        [0, 1, 0, 0] = Move forward with caution
+        [0, 0, 1, 0] = Move left
+        [0, 0, 0, 1] = Move right
+
+    (2) color_detected: Array for detected colors in the image
+        - Length: 5
+        - Indices: [blue, green, yellow, orange, red]
+        - Eg. output: [1, 1, 0, 0, 0] (Blue and green detected)
